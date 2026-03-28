@@ -1,10 +1,10 @@
 const { Router } = require("express");
+const asyncHandler = require("../middleware/asyncHandler");
 
 module.exports = (pool) => {
   const r = Router();
 
-  // GET Tasks (mit Filter)
-  r.get("/", async (req, res) => {
+  r.get("/", asyncHandler(async (req, res) => {
     const { project_id, status, priority, assignee, group_by } = req.query;
     const conditions = [];
     const values = [];
@@ -15,7 +15,7 @@ module.exports = (pool) => {
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const orderCol = group_by === "priority" ? "t.priority" :
-                     group_by === "status"   ? "t.status" :
+                     group_by === "status"   ? "t.status"   :
                      group_by === "assignee" ? "t.assignee" : "t.position";
 
     const { rows } = await pool.query(
@@ -26,12 +26,13 @@ module.exports = (pool) => {
       values
     );
     res.json(rows);
-  });
+  }));
 
-  // POST neue Aufgabe
-  r.post("/", async (req, res) => {
+  r.post("/", asyncHandler(async (req, res) => {
     const { project_id, name, description, status, priority, assignee,
             deadline, start_date, depends_on, position, checklist } = req.body;
+    if (!project_id || !name) return res.status(400).json({ error: "project_id und name erforderlich" });
+
     const { rows: [t] } = await pool.query(
       `INSERT INTO tasks
         (project_id, name, description, status, priority, assignee,
@@ -39,14 +40,14 @@ module.exports = (pool) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [project_id, name, description,
        status || "new", priority || "medium", assignee,
-       deadline, start_date, depends_on || [], position || 0,
+       deadline || null, start_date || null,
+       depends_on || [], position || 0,
        JSON.stringify(checklist || [])]
     );
     res.status(201).json(t);
-  });
+  }));
 
-  // PATCH Aufgabe (inkl. Gantt-Drag)
-  r.patch("/:id", async (req, res) => {
+  r.patch("/:id", asyncHandler(async (req, res) => {
     const fields = ["name","description","status","priority","assignee",
                     "deadline","start_date","depends_on","position","checklist","progress"];
     const updates = fields.filter(f => req.body[f] !== undefined);
@@ -61,43 +62,34 @@ module.exports = (pool) => {
       `UPDATE tasks SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`,
       [req.params.id, ...values]
     );
+    if (!t) return res.status(404).json({ error: "Nicht gefunden" });
 
-    // Abhängigkeiten neu berechnen wenn Datum geändert
     if (req.body.start_date || req.body.deadline) {
       await recalcDependencies(pool, req.params.id);
     }
-
     res.json(t);
-  });
+  }));
 
-  // DELETE
-  r.delete("/:id", async (req, res) => {
+  r.delete("/:id", asyncHandler(async (req, res) => {
     await pool.query("DELETE FROM tasks WHERE id = $1", [req.params.id]);
     res.status(204).end();
-  });
+  }));
 
   return r;
 };
 
-// Automatische Neuberechnung von Abhängigkeiten
 async function recalcDependencies(pool, changedTaskId) {
-  const { rows: changed } = await pool.query(
-    "SELECT * FROM tasks WHERE id = $1", [changedTaskId]
-  );
-  if (!changed[0]) return;
-
+  const { rows: [changed] } = await pool.query("SELECT * FROM tasks WHERE id = $1", [changedTaskId]);
+  if (!changed) return;
   const { rows: dependents } = await pool.query(
     "SELECT * FROM tasks WHERE $1 = ANY(depends_on)", [changedTaskId]
   );
-
   for (const dep of dependents) {
-    const newStart = changed[0].deadline;
+    const newStart = changed.deadline;
     const duration = dep.deadline
-      ? Math.ceil((new Date(dep.deadline) - new Date(dep.start_date)) / 86400000)
-      : 1;
+      ? Math.ceil((new Date(dep.deadline) - new Date(dep.start_date)) / 86400000) : 1;
     const newDeadline = new Date(newStart);
     newDeadline.setDate(newDeadline.getDate() + duration);
-
     await pool.query(
       "UPDATE tasks SET start_date=$1, deadline=$2, updated_at=NOW() WHERE id=$3",
       [newStart, newDeadline, dep.id]

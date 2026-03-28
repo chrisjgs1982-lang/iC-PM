@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { CalendarDays, AlertTriangle, CheckCircle2, Clock, ChevronRight, BarChart2, Gantt } from "lucide-react";
+import { CalendarDays, AlertTriangle, Clock, ChevronRight, BarChart2, Network } from "lucide-react";
 import { api } from "../lib/api";
 import { format, isPast } from "date-fns";
 import { de } from "date-fns/locale";
