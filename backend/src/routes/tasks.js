@@ -28,6 +28,17 @@ module.exports = (pool) => {
     res.json(rows);
   }));
 
+  // GET einzelne Aufgabe
+  r.get("/:id", asyncHandler(async (req, res) => {
+    const { rows: [task] } = await pool.query(
+      `SELECT t.*, p.name AS project_name FROM tasks t
+       JOIN projects p ON p.id = t.project_id
+       WHERE t.id = $1`, [req.params.id]
+    );
+    if (!task) return res.status(404).json({ error: "Nicht gefunden" });
+    res.json(task);
+  }));
+
   r.post("/", asyncHandler(async (req, res) => {
     const { project_id, name, description, status, priority, assignee,
             deadline, start_date, depends_on, position, checklist } = req.body;
