@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* DHTMLX Gantt Override */
+.gantt_container { font-family: inherit !important; }
+.gantt_task_line { border-radius: 4px !important; }
+.gantt_task_progress { border-radius: 4px 0 0 4px !important; }
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { @apply bg-gray-950 text-gray-100 antialiased; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-gray-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-600 rounded; }
+}
+
+@layer components {
+  .card { @apply bg-gray-900 border border-gray-800 rounded-xl p-4; }
+  .btn-primary { @apply bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
+  .btn-ghost  { @apply hover:bg-gray-800 text-gray-400 hover:text-white px-3 py-2 rounded-lg text-sm transition-colors; }
+  .badge-new       { @apply bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded-full; }
+  .badge-in_progress { @apply bg-blue-900/60 text-blue-300 text-xs px-2 py-0.5 rounded-full; }
+  .badge-done      { @apply bg-green-900/60 text-green-300 text-xs px-2 py-0.5 rounded-full; }
+  .badge-overdue   { @apply bg-red-900/60 text-red-300 text-xs px-2 py-0.5 rounded-full; }
+  .badge-blocked   { @apply bg-yellow-900/60 text-yellow-300 text-xs px-2 py-0.5 rounded-full; }
+  .badge-high   { @apply bg-red-900/40 text-red-400 text-xs px-2 py-0.5 rounded-full; }
+  .badge-medium { @apply bg-yellow-900/40 text-yellow-400 text-xs px-2 py-0.5 rounded-full; }
+  .badge-low    { @apply bg-gray-700 text-gray-400 text-xs px-2 py-0.5 rounded-full; }
+}
